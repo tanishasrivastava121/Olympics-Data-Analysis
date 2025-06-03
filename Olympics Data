@@ -1,0 +1,134 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+df = pd.read_csv("/kaggle/input/olympic-data-set/Summer-Olympic-medals-1976-to-2008.csv", encoding='ISO-8859-1')
+# Check the first few rows of the dataset
+df.head()
+# Summary of the dataset
+df.info()
+df.describe()
+# Unique values in each column
+df.nunique()
+# Data types
+print("\n🔹 Data Types:")
+print(df.dtypes)
+# Check for missing values and remove or impute them if necessary.
+#Check for missing values
+df.isnull().sum()
+# Drop rows with missing values if any
+df_cleaned = df.dropna()
+# After cleaning, check the dataset again
+print(df_cleaned.info())
+# Exploratory Data Analysis
+# Total medals won by each country
+medals_by_country = df_cleaned.groupby('Country')['Medal'].count().sort_values(ascending=False)
+# Plotting the top 10 countries by medals
+plt.figure(figsize=(5, 3))
+medals_by_country.head(10).plot(kind='bar', color='gold')
+plt.title("Top 10 Countries by Medal Count")
+plt.xlabel("Country")
+plt.ylabel("Total Medals")
+plt.show()
+# Medals Won Over the Years
+# Grouping by Year and counting the medals won
+medals_over_years = df_cleaned.groupby('Year')['Medal'].count()
+# Plotting the trend of medals won over the years
+plt.figure(figsize=(5, 3))
+plt.plot(medals_over_years.index,medals_over_years.values,marker='o', linestyle='-', color='b')
+plt.title("Total Medals Won Over the Years")
+plt.xlabel("Year")
+plt.ylabel("Total Medals")
+plt.grid(True)
+plt.show()
+# Gender distribution in events
+gender_distribution = df_cleaned['Gender'].value_counts()
+# Plotting gender distribution
+plt.figure(figsize=(6, 4))
+gender_distribution.plot(kind='pie',autopct='%1.1f%%',colors=['#ff9999','#66b3ff'], explode=[0.05, 0])
+plt.title("Gender Distribution in Olympics Events")
+plt.ylabel('')
+plt.show()
+#Top Athletes with Most Medals
+# Group by Athlete and count the number of medals
+athlete_medal_count = df_cleaned.groupby('Athlete')['Medal'].count().sort_values(ascending=False)
+# Plotting the top 10 athletes with most medals
+plt.figure(figsize=(5, 3))
+athlete_medal_count.head(10).plot(kind='density', color='red')
+plt.title("Top 10 Athletes by Medal Count")
+plt.xlabel("Athlete")
+plt.ylabel("Total Medals")
+plt.show()
+import seaborn as sns
+import matplotlib.pyplot as plt
+# Example: checking outliers in a numerical column like 'Year'
+sns.boxplot(x=df['Year'])
+plt.title("Boxplot for 'Year'")
+plt.show()
+#Predictive analysis
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+
+# Drop rows with missing values
+df.dropna(inplace=True)
+
+# Drop 'Athlete' column as it's unlikely to generalize
+df.drop(columns=["Athlete"], inplace=True)
+
+# Encode categorical variables
+label_encoders = {}
+for col in df.columns:
+    if df[col].dtype == 'object':
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        label_encoders[col] = le
+
+# Define features and target
+X = df.drop(columns=["Medal"])
+y = df["Medal"]
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Random Forest Classifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict and evaluate
+y_pred = model.predict(X_test)
+print("Classification Report:\n", classification_report(y_test, y_pred, target_names=label_encoders["Medal"].classes_))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+# Get the confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+# Optional: get class labels in the original string format
+labels = label_encoders["Medal"].classes_
+
+# Plot the heatmap
+plt.figure(figsize=(4, 3))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="YlGnBu", xticklabels=labels, yticklabels=labels)
+plt.title("Confusion Matrix - Medal Prediction")
+plt.xlabel("Predicted Medal")
+plt.ylabel("Actual Medal")
+plt.tight_layout()
+plt.show()
+# Get feature importances from the trained Random Forest model
+importances = model.feature_importances_
+feature_names = X.columns
+
+# Create a DataFrame for visualization
+feature_importance_df = pd.DataFrame({
+    "Feature": feature_names,
+    "Importance": importances
+}).sort_values(by="Importance", ascending=False)
+
+# Plot feature importances
+plt.figure(figsize=(10, 6))
+sns.barplot(x="Importance", y="Feature", data=feature_importance_df, palette="viridis")
+plt.title("Feature Importance in Medal Prediction")
+plt.xlabel("Importance Score")
+plt.ylabel("Features")
+plt.tight_layout()
+plt.show()
